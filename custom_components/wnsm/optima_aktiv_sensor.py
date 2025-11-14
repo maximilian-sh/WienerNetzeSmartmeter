@@ -1,10 +1,12 @@
 """
 Wiener Energie Optima Aktiv price sensor
 """
+import json
 import logging
 import re
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Optional
+from urllib.parse import urlencode
 
 import requests
 from homeassistant.components.sensor import (
@@ -16,7 +18,6 @@ from homeassistant.const import UnitOfEnergy
 
 _LOGGER = logging.getLogger(__name__)
 
-WIEN_ENERGIE_OPTIMA_AKTIV_BASE_URL = "https://www.wienenergie.at/privat/produkte/strom/optima-aktiv/"
 WIEN_ENERGIE_API_URL = "https://www.wienenergie.at/wp-json/tarife/tarifberater"
 
 # Zusammensetzung options
@@ -76,10 +77,10 @@ class OptimaAktivPriceSensor(SensorEntity):
 
     async def async_update(self):
         """
-        Update sensor by fetching price from Wien Energie website
+        Update sensor by fetching price from Wien Energie API
         """
         try:
-            # Fetch the webpage with the selected Zusammensetzung
+            # Fetch price data from API
             response = await self.hass.async_add_executor_job(
                 self._fetch_price_data
             )
@@ -111,8 +112,6 @@ class OptimaAktivPriceSensor(SensorEntity):
         Returns:
             Complete API URL with query parameters
         """
-        from datetime import date
-        
         # Format: SOPTA_0001-{zusammensetzung}-none
         options = f"SOPTA_0001-{self.zusammensetzung}-none"
         prozessdatum = date.today().strftime("%Y-%m-%dT00:00:00Z")
@@ -126,9 +125,7 @@ class OptimaAktivPriceSensor(SensorEntity):
             "prozessdatum": prozessdatum
         }
         
-        # Build query string
-        query_string = "&".join([f"{k}={v}" for k, v in params.items()])
-        return f"{WIEN_ENERGIE_API_URL}?{query_string}"
+        return f"{WIEN_ENERGIE_API_URL}?{urlencode(params)}"
 
     def _fetch_price_data(self) -> Optional[dict[str, Any]]:
         """
@@ -138,8 +135,6 @@ class OptimaAktivPriceSensor(SensorEntity):
             Dictionary with 'verbrauchspreis' key, or None on error
         """
         try:
-            import json
-            
             url = self._build_api_url()
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -163,27 +158,27 @@ class OptimaAktivPriceSensor(SensorEntity):
             content = data["data"][0].get("content", {})
             price_list = content.get("list", [])
             
-            # Find Verbrauchspreis in the list
-            verbrauchspreis = None
-            for item in price_list:
-                if item.get("name") == "Verbrauchspreis:":
-                    price_str = item.get("shortValue", "")
-                    # Extract price: "17,4237 Cent/kWh" -> "17.4237"
-                    price_match = re.search(r'([\d,]+)', price_str)
-                    if price_match:
-                        verbrauchspreis_str = price_match.group(1).replace(',', '.')
-                        try:
-                            verbrauchspreis = float(verbrauchspreis_str)
-                            break
-                        except ValueError:
-                            continue
+            # Find Verbrauchspreis in the list using next() for efficiency
+            verbrauchspreis_item = next(
+                (item for item in price_list if item.get("name") == "Verbrauchspreis:"),
+                None
+            )
             
-            if verbrauchspreis is None:
+            if verbrauchspreis_item is None:
                 _LOGGER.warning(
                     f"Could not find Verbrauchspreis in API response for {self.zusammensetzung}. "
                     f"Available items: {[item.get('name') for item in price_list]}"
                 )
                 return None
+            
+            # Extract price: "17,4237 Cent/kWh" -> 17.4237
+            price_str = verbrauchspreis_item.get("shortValue", "")
+            price_match = re.search(r'([\d,]+)', price_str)
+            if not price_match:
+                _LOGGER.warning(f"Could not extract price from '{price_str}'")
+                return None
+            
+            verbrauchspreis = float(price_match.group(1).replace(',', '.'))
             
             return {
                 "verbrauchspreis": verbrauchspreis,
@@ -197,7 +192,10 @@ class OptimaAktivPriceSensor(SensorEntity):
         except json.JSONDecodeError as e:
             _LOGGER.error(f"Error parsing JSON response from Wien Energie API: {e}")
             return None
-        except Exception as e:
+        except (ValueError, KeyError) as e:
             _LOGGER.error(f"Error processing Wien Energie API response: {e}")
+            return None
+        except Exception as e:
+            _LOGGER.error(f"Unexpected error processing Wien Energie API response: {e}")
             _LOGGER.exception(e)
             return None
