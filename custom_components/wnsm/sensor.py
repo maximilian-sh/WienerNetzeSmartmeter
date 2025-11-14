@@ -44,23 +44,32 @@ async def async_setup_entry(
     async_add_entities,
 ):
     """Setup sensors from a config entry created in the integrations UI."""
-    config = hass.data[DOMAIN][config_entry.entry_id]
+    # Get config from hass.data (set by __init__.py) or fallback to config_entry.data
+    config = hass.data.get(DOMAIN, {}).get(config_entry.entry_id, config_entry.data)
+    
+    _LOGGER.debug(f"Setting up sensors with config keys: {list(config.keys())}")
     
     # Create main smartmeter sensors
     wnsm_sensors = []
     if CONF_ZAEHLPUNKTE in config and config[CONF_ZAEHLPUNKTE]:
         try:
+            _LOGGER.info(f"Found {len(config[CONF_ZAEHLPUNKTE])} zaehlpunkt(e) in config")
             wnsm_sensors = [
                 WNSMSensor(config[CONF_USERNAME], config[CONF_PASSWORD], zp["zaehlpunktnummer"])
                 for zp in config[CONF_ZAEHLPUNKTE]
             ]
             _LOGGER.info(f"Created {len(wnsm_sensors)} smartmeter sensor(s)")
+        except KeyError as e:
+            _LOGGER.error(f"Missing required key in zaehlpunkt data: {e}")
+            _LOGGER.exception(e)
         except Exception as e:
             _LOGGER.error(f"Failed to create smartmeter sensors: {e}")
             _LOGGER.exception(e)
     else:
-        _LOGGER.warning(
-            f"No zaehlpunkte found in config. Config keys: {list(config.keys())}"
+        _LOGGER.error(
+            f"No zaehlpunkte found in config. Config keys: {list(config.keys())}. "
+            f"CONF_ZAEHLPUNKTE present: {CONF_ZAEHLPUNKTE in config}, "
+            f"Value: {config.get(CONF_ZAEHLPUNKTE)}"
         )
     
     # Add Optima Aktiv Verbrauchspreis sensor only if enabled
@@ -80,10 +89,14 @@ async def async_setup_entry(
             # Continue without the price sensor - don't break the entire integration
     
     if not sensors_to_add:
-        _LOGGER.error("No sensors to add! Check configuration.")
+        _LOGGER.error(
+            f"No sensors to add! Check configuration. "
+            f"wnsm_sensors: {len(wnsm_sensors)}, "
+            f"optima_aktiv_enabled: {config.get(CONF_ENABLE_OPTIMA_AKTIV, False)}"
+        )
         return
     
-    _LOGGER.info(f"Adding {len(sensors_to_add)} sensor(s) total")
+    _LOGGER.info(f"Adding {len(sensors_to_add)} sensor(s) total ({len(wnsm_sensors)} smartmeter + {len(sensors_to_add) - len(wnsm_sensors)} Optima Aktiv)")
     async_add_entities(sensors_to_add, update_before_add=True)
 
 

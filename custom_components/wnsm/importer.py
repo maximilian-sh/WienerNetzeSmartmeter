@@ -156,12 +156,16 @@ class Importer:
 
         bewegungsdaten = await self.async_smartmeter.get_bewegungsdaten(self.zaehlpunkt, start, end, self.granularity)
         _LOGGER.debug(f"Mapped historical data: {bewegungsdaten}")
-        if bewegungsdaten['unitOfMeasurement'] == 'WH':
+        
+        # Handle missing unitOfMeasurement key
+        unit_of_measurement = bewegungsdaten.get('unitOfMeasurement', 'KWH')  # Default to KWH if not present
+        if unit_of_measurement == 'WH':
             factor = 1e-3
-        elif bewegungsdaten['unitOfMeasurement'] == 'KWH':
+        elif unit_of_measurement == 'KWH':
             factor = 1.0
         else:
-            raise NotImplementedError(f'Unit {bewegungsdaten["unitOfMeasurement"]}" is not yet implemented. Please report!')
+            _LOGGER.warning(f'Unknown unit "{unit_of_measurement}", defaulting to KWH factor')
+            factor = 1.0
 
         dates = defaultdict(Decimal)
         if 'values' not in bewegungsdaten:

@@ -93,8 +93,14 @@ class WienerNetzeSmartMeterCustomConfigFlow(config_entries.ConfigFlow, domain=DO
     async def async_step_optima_aktiv(self, user_input: Optional[dict[str, Any]] = None):
         """Ask user if they want to add Optima Aktiv price sensor."""
         if user_input is not None:
+            if self.data is None:
+                self.data = {}
             enable_optima_aktiv = user_input.get(CONF_ENABLE_OPTIMA_AKTIV, False)
             self.data[CONF_ENABLE_OPTIMA_AKTIV] = enable_optima_aktiv
+            
+            _LOGGER.debug(f"Creating entry with data keys: {list(self.data.keys())}")
+            if CONF_ZAEHLPUNKTE in self.data:
+                _LOGGER.debug(f"Zaehlpunkte count: {len(self.data[CONF_ZAEHLPUNKTE])}")
             
             if enable_optima_aktiv:
                 # If enabled, ask for Zusammensetzung
@@ -116,7 +122,14 @@ class WienerNetzeSmartMeterCustomConfigFlow(config_entries.ConfigFlow, domain=DO
     async def async_step_zusammensetzung(self, user_input: Optional[dict[str, Any]] = None):
         """Ask user to select Zusammensetzung for Optima Aktiv."""
         if user_input is not None:
+            if self.data is None:
+                self.data = {}
             self.data[CONF_ZUSAMMENSETZUNG] = user_input[CONF_ZUSAMMENSETZUNG]
+            
+            _LOGGER.debug(f"Creating entry with data keys: {list(self.data.keys())}")
+            if CONF_ZAEHLPUNKTE in self.data:
+                _LOGGER.debug(f"Zaehlpunkte count: {len(self.data[CONF_ZAEHLPUNKTE])}")
+            
             # User is done, create entry
             return self.async_create_entry(
                 title="Wiener Netze Smartmeter", data=self.data
