@@ -139,17 +139,27 @@ class OptimaAktivPriceSensor(SensorEntity):
             
             verbrauchspreis = None
             
-            # Find price elements - looking for elements with class containing "cardPrice"
+            # Try multiple parsing strategies
+            # Strategy 1: Look for price elements with class containing "cardPrice"
             price_elements = tree.xpath('//p[contains(@class, "cardPrice")]')
             
-            # Look for spans with "Verbrauchspreis" label
+            # Strategy 2: Look for spans with "Verbrauchspreis" label
             verbrauchspreis_spans = tree.xpath('//span[contains(text(), "Verbrauchspreis")]')
+            
+            # Strategy 3: Look for any element containing "Verbrauchspreis"
+            verbrauchspreis_elements = tree.xpath('//*[contains(text(), "Verbrauchspreis")]')
             
             # Try to find price near the Verbrauchspreis label
             for span in verbrauchspreis_spans:
+                # Look in parent container
                 parent = span.getparent()
                 if parent is not None:
-                    price_texts = parent.xpath('.//p[contains(@class, "cardPrice")]//text()')
+                    # Look for price in sibling or parent elements
+                    container = parent.getparent() if parent.getparent() is not None else parent
+                    price_texts = container.xpath('.//p[contains(@class, "cardPrice")]//text()')
+                    if not price_texts:
+                        # Try any text node containing numbers and Cent/kWh
+                        price_texts = container.xpath('.//text()[contains(., "Cent/kWh")]')
                     for price_text in price_texts:
                         match = re.search(r'([\d,]+)\s*Cent/kWh', price_text)
                         if match:
@@ -172,22 +182,44 @@ class OptimaAktivPriceSensor(SensorEntity):
                             verbrauchspreis = float(verbrauchspreis_str)
                             break
             
+            # Another fallback: search in all text nodes
+            if verbrauchspreis is None:
+                all_text_nodes = tree.xpath('//text()[contains(., "Cent/kWh")]')
+                for text_node in all_text_nodes:
+                    match = re.search(r'([\d,]+)\s*Cent/kWh', text_node)
+                    if match:
+                        verbrauchspreis_str = match.group(1).replace(',', '.')
+                        verbrauchspreis = float(verbrauchspreis_str)
+                        break
+            
             # Last resort: regex search on full HTML
             if verbrauchspreis is None:
                 all_text = response.text
-                verbrauchspreis_match = re.search(
+                # Try multiple patterns
+                patterns = [
+                    r'Verbrauchspreis[^>]*>.*?([\d,]+)\s*Cent/kWh',
+                    r'([\d,]+)\s*Cent/kWh[^<]*Verbrauchspreis',
                     r'Verbrauchspreis.*?([\d,]+)\s*Cent/kWh',
-                    all_text,
-                    re.DOTALL | re.IGNORECASE
-                )
-                if verbrauchspreis_match:
-                    verbrauchspreis_str = verbrauchspreis_match.group(1).replace(',', '.')
-                    verbrauchspreis = float(verbrauchspreis_str)
+                ]
+                for pattern in patterns:
+                    verbrauchspreis_match = re.search(pattern, all_text, re.DOTALL | re.IGNORECASE)
+                    if verbrauchspreis_match:
+                        verbrauchspreis_str = verbrauchspreis_match.group(1).replace(',', '.')
+                        try:
+                            verbrauchspreis = float(verbrauchspreis_str)
+                            break
+                        except ValueError:
+                            continue
             
             if verbrauchspreis is None:
                 _LOGGER.warning(
-                    f"Could not parse Verbrauchspreis for {self.zusammensetzung}"
+                    f"Could not parse Verbrauchspreis for {self.zusammensetzung}. "
+                    f"Found {len(price_elements)} price elements, {len(verbrauchspreis_spans)} Verbrauchspreis spans. "
+                    f"URL: {url}"
                 )
+                # Log a sample of the HTML for debugging
+                if len(price_elements) > 0:
+                    _LOGGER.debug(f"Sample price element text: {price_elements[0].text_content()[:200]}")
                 return None
             
             return {

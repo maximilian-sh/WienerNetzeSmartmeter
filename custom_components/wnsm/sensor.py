@@ -2,6 +2,7 @@
 WienerNetze Smartmeter sensor platform
 """
 import collections.abc
+import logging
 from datetime import timedelta
 from typing import Optional
 
@@ -24,6 +25,8 @@ from homeassistant.helpers.typing import (
 from .const import CONF_ZAEHLPUNKTE, CONF_ZUSAMMENSETZUNG, CONF_ENABLE_OPTIMA_AKTIV
 from .wnsm_sensor import WNSMSensor
 from .optima_aktiv_sensor import OptimaAktivPriceSensor
+
+_LOGGER = logging.getLogger(__name__)
 # Time between updating data from Wiener Netze
 SCAN_INTERVAL = timedelta(minutes=60 * 6)
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
@@ -50,9 +53,16 @@ async def async_setup_entry(
     # Add Optima Aktiv Verbrauchspreis sensor only if enabled
     sensors_to_add = list(wnsm_sensors)
     if config.get(CONF_ENABLE_OPTIMA_AKTIV, False):
-        zusammensetzung = config.get(CONF_ZUSAMMENSETZUNG, "basismix")
-        optima_aktiv_sensor = OptimaAktivPriceSensor(zusammensetzung)
-        sensors_to_add.append(optima_aktiv_sensor)
+        try:
+            zusammensetzung = config.get(CONF_ZUSAMMENSETZUNG, "basismix")
+            optima_aktiv_sensor = OptimaAktivPriceSensor(zusammensetzung)
+            sensors_to_add.append(optima_aktiv_sensor)
+        except Exception as e:
+            _LOGGER.error(
+                f"Failed to create Optima Aktiv sensor: {e}. "
+                "Integration will continue without price sensor."
+            )
+            # Continue without the price sensor - don't break the entire integration
     
     async_add_entities(sensors_to_add, update_before_add=True)
 
