@@ -5,6 +5,7 @@ DOMAIN = "wnsm"
 
 CONF_ZAEHLPUNKTE = "zaehlpunkte"
 CONF_ZUSAMMENSETZUNG = "zusammensetzung"
+CONF_ENABLE_OPTIMA_AKTIV = "enable_optima_aktiv"
 
 ATTRS_ZAEHLPUNKT_CALL = [
     ("zaehlpunktnummer", "zaehlpunktnummer"),

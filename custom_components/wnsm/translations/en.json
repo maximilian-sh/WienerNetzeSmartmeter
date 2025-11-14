@@ -13,6 +13,20 @@
           "username": "Username",
           "password": "Password"
         }        
+      },
+      "optima_aktiv": {
+        "title": "Optima Aktiv Price Sensor",
+        "description": "Do you want to add a sensor for the Optima Aktiv Verbrauchspreis (consumption price)?",
+        "data": {
+          "enable_optima_aktiv": "Enable Optima Aktiv price sensor"
+        }
+      },
+      "zusammensetzung": {
+        "title": "Zusammensetzung Selection",
+        "description": "Select the Zusammensetzung (energy composition) for your Optima Aktiv contract",
+        "data": {
+          "zusammensetzung": "Zusammensetzung"
+        }
       }
     }
   }
