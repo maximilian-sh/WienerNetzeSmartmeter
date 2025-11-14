@@ -21,8 +21,9 @@ from homeassistant.helpers.typing import (
     ConfigType,
     DiscoveryInfoType,
 )
-from .const import CONF_ZAEHLPUNKTE
+from .const import CONF_ZAEHLPUNKTE, CONF_ZUSAMMENSETZUNG
 from .wnsm_sensor import WNSMSensor
+from .optima_aktiv_sensor import OptimaAktivPriceSensor
 # Time between updating data from Wiener Netze
 SCAN_INTERVAL = timedelta(minutes=60 * 6)
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
@@ -45,7 +46,11 @@ async def async_setup_entry(
         WNSMSensor(config[CONF_USERNAME], config[CONF_PASSWORD], zp["zaehlpunktnummer"])
         for zp in config[CONF_ZAEHLPUNKTE]
     ]
-    async_add_entities(wnsm_sensors, update_before_add=True)
+    # Add Optima Aktiv Verbrauchspreis sensor
+    # Use configured Zusammensetzung or default to basismix
+    zusammensetzung = config.get(CONF_ZUSAMMENSETZUNG, "basismix")
+    optima_aktiv_sensor = OptimaAktivPriceSensor(zusammensetzung)
+    async_add_entities(wnsm_sensors + [optima_aktiv_sensor], update_before_add=True)
 
 
 async def async_setup_platform(
