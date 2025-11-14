@@ -92,9 +92,14 @@ class WNSMSensor(SensorEntity):
             if async_smartmeter.is_active(zaehlpunkt_response):
                 # Since the update is not exactly at midnight, both yesterday and the day before are tried to make sure a meter reading is returned
                 reading_dates = [before(today(), 1), before(today(), 2)]
+                meter_reading = None
                 for reading_date in reading_dates:
                     meter_reading = await async_smartmeter.get_meter_reading_from_historic_data(self.zaehlpunkt, reading_date, datetime.now())
-                    self._attr_native_value = meter_reading
+                    if meter_reading is not None:
+                        self._attr_native_value = meter_reading
+                        break
+                if meter_reading is None:
+                    _LOGGER.warning(f"Could not retrieve meter reading for {self.zaehlpunkt}")
                 importer = Importer(self.hass, async_smartmeter, self.zaehlpunkt, self.unit_of_measurement, self.granularity())
                 await importer.async_import()
             self._available = True
