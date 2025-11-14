@@ -45,10 +45,23 @@ async def async_setup_entry(
 ):
     """Setup sensors from a config entry created in the integrations UI."""
     config = hass.data[DOMAIN][config_entry.entry_id]
-    wnsm_sensors = [
-        WNSMSensor(config[CONF_USERNAME], config[CONF_PASSWORD], zp["zaehlpunktnummer"])
-        for zp in config[CONF_ZAEHLPUNKTE]
-    ]
+    
+    # Create main smartmeter sensors
+    wnsm_sensors = []
+    if CONF_ZAEHLPUNKTE in config and config[CONF_ZAEHLPUNKTE]:
+        try:
+            wnsm_sensors = [
+                WNSMSensor(config[CONF_USERNAME], config[CONF_PASSWORD], zp["zaehlpunktnummer"])
+                for zp in config[CONF_ZAEHLPUNKTE]
+            ]
+            _LOGGER.info(f"Created {len(wnsm_sensors)} smartmeter sensor(s)")
+        except Exception as e:
+            _LOGGER.error(f"Failed to create smartmeter sensors: {e}")
+            _LOGGER.exception(e)
+    else:
+        _LOGGER.warning(
+            f"No zaehlpunkte found in config. Config keys: {list(config.keys())}"
+        )
     
     # Add Optima Aktiv Verbrauchspreis sensor only if enabled
     sensors_to_add = list(wnsm_sensors)
@@ -57,13 +70,20 @@ async def async_setup_entry(
             zusammensetzung = config.get(CONF_ZUSAMMENSETZUNG, "basismix")
             optima_aktiv_sensor = OptimaAktivPriceSensor(zusammensetzung)
             sensors_to_add.append(optima_aktiv_sensor)
+            _LOGGER.info(f"Added Optima Aktiv sensor with Zusammensetzung: {zusammensetzung}")
         except Exception as e:
             _LOGGER.error(
                 f"Failed to create Optima Aktiv sensor: {e}. "
                 "Integration will continue without price sensor."
             )
+            _LOGGER.exception(e)
             # Continue without the price sensor - don't break the entire integration
     
+    if not sensors_to_add:
+        _LOGGER.error("No sensors to add! Check configuration.")
+        return
+    
+    _LOGGER.info(f"Adding {len(sensors_to_add)} sensor(s) total")
     async_add_entities(sensors_to_add, update_before_add=True)
 
 
