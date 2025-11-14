@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from homeassistant.components.sensor import (
@@ -77,6 +77,20 @@ class WNSMSensor(SensorEntity):
 
     def granularity(self) -> ValueType:
         return ValueType.from_str(self._attr_extra_state_attributes.get("granularity", "QUARTER_HOUR"))
+
+    @property
+    def scan_interval(self) -> timedelta:
+        """
+        Override scan interval based on granularity.
+        If user has opted in for quarter-hour updates, update more frequently.
+        """
+        granularity = self.granularity()
+        if granularity == ValueType.QUARTER_HOUR:
+            # Update every 20 minutes for quarter-hour data (slightly longer than 15min to avoid too frequent API calls)
+            return timedelta(minutes=20)
+        else:
+            # Default to 6 hours for daily updates
+            return timedelta(minutes=60 * 6)
 
     async def async_update(self):
         """
