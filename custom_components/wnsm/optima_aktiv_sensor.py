@@ -4,7 +4,7 @@ Wiener Energie Optima Aktiv price sensor
 import json
 import logging
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Optional
 from urllib.parse import urlencode
 
@@ -74,6 +74,14 @@ class OptimaAktivPriceSensor(SensorEntity):
     def available(self) -> bool:
         """Return True if entity is available."""
         return self._available
+
+    @property
+    def scan_interval(self) -> timedelta:
+        """
+        Update interval for the price sensor.
+        Updates daily to get the latest price data.
+        """
+        return timedelta(hours=24)
 
     async def async_update(self):
         """

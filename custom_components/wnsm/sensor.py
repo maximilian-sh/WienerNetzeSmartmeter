@@ -28,7 +28,7 @@ from .optima_aktiv_sensor import OptimaAktivPriceSensor
 
 _LOGGER = logging.getLogger(__name__)
 # Time between updating data from Wiener Netze
-SCAN_INTERVAL = timedelta(minutes=60 * 6)
+SCAN_INTERVAL = timedelta(minutes=60)
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_USERNAME): cv.string,

@@ -3,12 +3,14 @@ name: Validate with hassfest
 on:
   push:
   pull_request:
+  workflow_dispatch:
   schedule:
     - cron:  '0 0 * * *'
 
 jobs:
   validate:
-    if: github.repository_owner == 'DarwinsBuddy'
+    # Run on main repo or when manually triggered
+    if: github.repository_owner == 'DarwinsBuddy' || github.event_name == 'workflow_dispatch'
     runs-on: "ubuntu-latest"
     steps:
         - uses: "actions/checkout@v4"

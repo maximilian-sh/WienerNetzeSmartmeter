@@ -81,16 +81,10 @@ class WNSMSensor(SensorEntity):
     @property
     def scan_interval(self) -> timedelta:
         """
-        Override scan interval based on granularity.
-        If user has opted in for quarter-hour updates, update more frequently.
+        Update interval for smart meter sensors.
+        Always updates hourly to get the latest data from the smart meter.
         """
-        granularity = self.granularity()
-        if granularity == ValueType.QUARTER_HOUR:
-            # Update every 20 minutes for quarter-hour data (slightly longer than 15min to avoid too frequent API calls)
-            return timedelta(minutes=20)
-        else:
-            # Default to 6 hours for daily updates
-            return timedelta(minutes=60 * 6)
+        return timedelta(minutes=60)
 
     async def async_update(self):
         """
