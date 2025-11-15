@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Optional
+from typing import Any, Optional, Callable
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -9,6 +9,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import UnitOfEnergy
+from homeassistant.helpers.event import async_track_time_change
 from homeassistant.util import slugify
 
 from .AsyncSmartmeter import AsyncSmartmeter
@@ -47,6 +48,7 @@ class WNSMSensor(SensorEntity):
         self._name: str = zaehlpunkt
         self._available: bool = True
         self._updatets: str | None = None
+        self._remove_update_listener: Callable[[], None] | None = None
 
     @property
     def get_state(self) -> Optional[str]:
@@ -85,6 +87,30 @@ class WNSMSensor(SensorEntity):
         Always updates hourly to get the latest data from the smart meter.
         """
         return timedelta(minutes=60)
+
+    async def async_added_to_hass(self) -> None:
+        """When entity is added to hass."""
+        await super().async_added_to_hass()
+        # Schedule updates at exactly xx:00 (minute 0 of every hour)
+        self._remove_update_listener = async_track_time_change(
+            self.hass,
+            self._scheduled_update,
+            minute=0,
+            second=0
+        )
+        _LOGGER.debug(f"Scheduled hourly updates at xx:00 for {self.zaehlpunkt}")
+
+    async def async_will_remove_from_hass(self) -> None:
+        """When entity will be removed from hass."""
+        if self._remove_update_listener:
+            self._remove_update_listener()
+            self._remove_update_listener = None
+        await super().async_will_remove_from_hass()
+
+    async def _scheduled_update(self, now: datetime) -> None:
+        """Callback for scheduled updates at xx:00."""
+        _LOGGER.debug(f"Scheduled update triggered at {now.strftime('%H:%M:%S')} for {self.zaehlpunkt}")
+        await self.async_update()
 
     async def async_update(self):
         """

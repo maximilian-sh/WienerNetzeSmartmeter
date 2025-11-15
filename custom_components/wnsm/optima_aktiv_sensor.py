@@ -5,7 +5,7 @@ import json
 import logging
 import re
 from datetime import date, datetime, timedelta
-from typing import Any, Optional
+from typing import Any, Optional, Callable
 from urllib.parse import urlencode
 
 import requests
@@ -14,7 +14,8 @@ from homeassistant.components.sensor import (
     SensorStateClass,
     SensorEntity,
 )
-from homeassistant.const import UnitOfEnergy
+from homeassistant.const import UnitOfEnergy, CURRENCY_EURO
+from homeassistant.helpers.event import async_track_time_change
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,12 +64,13 @@ class OptimaAktivPriceSensor(SensorEntity):
         
         self._attr_name = f"Optima Aktiv Verbrauchspreis ({zusammensetzung_display})"
         self._attr_unique_id = f"optima_aktiv_verbrauchspreis_{zusammensetzung}"
-        self._attr_native_unit_of_measurement = "Cent/kWh"
-        self._attr_device_class = SensorDeviceClass.ENERGY
+        self._attr_native_unit_of_measurement = f"{CURRENCY_EURO}/kWh"
+        self._attr_device_class = SensorDeviceClass.MONETARY
         self._attr_icon = self._icon()
         self._attr_state_class = SensorStateClass.MEASUREMENT
         self._available: bool = True
         self._updatets: str | None = None
+        self._remove_update_listener: Callable[[], None] | None = None
 
     @property
     def available(self) -> bool:
@@ -82,6 +84,31 @@ class OptimaAktivPriceSensor(SensorEntity):
         Updates daily to get the latest price data.
         """
         return timedelta(hours=24)
+
+    async def async_added_to_hass(self) -> None:
+        """When entity is added to hass."""
+        await super().async_added_to_hass()
+        # Schedule updates at exactly 00:00 (midnight) daily
+        self._remove_update_listener = async_track_time_change(
+            self.hass,
+            self._scheduled_update,
+            hour=0,
+            minute=0,
+            second=0
+        )
+        _LOGGER.debug(f"Scheduled daily updates at 00:00 for Optima Aktiv sensor ({self.zusammensetzung})")
+
+    async def async_will_remove_from_hass(self) -> None:
+        """When entity will be removed from hass."""
+        if self._remove_update_listener:
+            self._remove_update_listener()
+            self._remove_update_listener = None
+        await super().async_will_remove_from_hass()
+
+    async def _scheduled_update(self, now: datetime) -> None:
+        """Callback for scheduled updates at 00:00."""
+        _LOGGER.debug(f"Scheduled update triggered at {now.strftime('%Y-%m-%d %H:%M:%S')} for Optima Aktiv sensor ({self.zusammensetzung})")
+        await self.async_update()
 
     async def async_update(self):
         """
@@ -97,12 +124,18 @@ class OptimaAktivPriceSensor(SensorEntity):
                 self._available = False
                 return
             
-            self._attr_native_value = response.get("verbrauchspreis")
+            # Convert from Cent/kWh to EUR/kWh (divide by 100)
+            verbrauchspreis_cent = response.get("verbrauchspreis")
+            if verbrauchspreis_cent is not None:
+                self._attr_native_value = verbrauchspreis_cent / 100.0
+            else:
+                self._attr_native_value = None
             
             self._attr_extra_state_attributes = {
                 "zusammensetzung": self.zusammensetzung,
                 "last_update": response.get("last_update"),
                 "url": response.get("url"),
+                "price_cent_per_kwh": verbrauchspreis_cent,  # Keep original Cent/kWh value in attributes
             }
             self._available = True
             self._updatets = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
