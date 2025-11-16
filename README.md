@@ -5,11 +5,9 @@
 ![Validate](https://github.com/maximilian-sh/WienerNetzeSmartmeter/actions/workflows/validate.yml/badge.svg)
 ![Release](https://github.com/maximilian-sh/WienerNetzeSmartmeter/actions/workflows/release.yml/badge.svg)
 
-## ⚠️ Maintenance Notice
+## ⚠️ Fork Notice
 
-This is a maintained fork of the original [WienerNetzeSmartmeter](https://github.com/DarwinsBuddy/WienerNetzeSmartmeter) repository. The original repository appears to be unresponsive, so I've taken over maintenance to keep this integration working.
-
-**Current Status**: The integration is working and I'm maintaining it as needed. However, I'm not sure how much time I'll be able to invest in major feature development long-term. Feel free to use it - it's functional and I'll fix critical issues as they arise.
+This is a fork of the original [WienerNetzeSmartmeter](https://github.com/DarwinsBuddy/WienerNetzeSmartmeter) repository with some additions for personal use. As long as pull requests are not accepted in the original repository, this fork will be maintained for personal use.
 
 ## About
 
