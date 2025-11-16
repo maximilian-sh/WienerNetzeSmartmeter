@@ -2,6 +2,8 @@ name: Validate with hacs
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'custom_components/**'
       - 'hacs.json'
