@@ -67,7 +67,9 @@ class OptimaAktivPriceSensor(SensorEntity):
         self._attr_native_unit_of_measurement = f"{CURRENCY_EURO}/kWh"
         self._attr_device_class = SensorDeviceClass.MONETARY
         self._attr_icon = self._icon()
-        self._attr_state_class = None
+        # Set state_class to MEASUREMENT to enable statistics for Energy Dashboard
+        # Note: This will show a warning, but is required for historical cost calculations
+        self._attr_state_class = SensorStateClass.MEASUREMENT
         self._available: bool = True
         self._updatets: str | None = None
         self._remove_update_listener: Callable[[], None] | None = None
