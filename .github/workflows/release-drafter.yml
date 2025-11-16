@@ -2,9 +2,11 @@ name: Release Drafter
 
 on:
   push:
-    # branches to consider in the event; optional, defaults to all
     branches:
       - main
+    paths:
+      - 'custom_components/**'
+      - 'manifest.json'
 
 jobs:
   update_release_draft:

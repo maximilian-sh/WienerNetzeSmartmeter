@@ -10,6 +10,7 @@ from homeassistant.components.sensor import (
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import UnitOfEnergy
 from homeassistant.helpers.event import async_track_time_change
+from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
 from .AsyncSmartmeter import AsyncSmartmeter
@@ -91,7 +92,8 @@ class WNSMSensor(SensorEntity):
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass."""
         await super().async_added_to_hass()
-        # Schedule updates at exactly xx:00 (minute 0 of every hour)
+        # Schedule updates at exactly xx:00 (minute 0, second 0 of every hour)
+        # Using minute=0, second=0 without hour parameter triggers every hour at :00
         self._remove_update_listener = async_track_time_change(
             self.hass,
             self._scheduled_update,
@@ -99,6 +101,13 @@ class WNSMSensor(SensorEntity):
             second=0
         )
         _LOGGER.debug(f"Scheduled hourly updates at xx:00 for {self.zaehlpunkt}")
+        
+        # Trigger initial update if we're not at the top of the hour
+        # This ensures the sensor is updated immediately on startup
+        now = dt_util.utcnow()
+        if now.minute != 0 or now.second != 0:
+            _LOGGER.debug(f"Not at top of hour ({now.strftime('%H:%M:%S')}), triggering initial update for {self.zaehlpunkt}")
+            await self.async_update()
 
     async def async_will_remove_from_hass(self) -> None:
         """When entity will be removed from hass."""
@@ -109,7 +118,7 @@ class WNSMSensor(SensorEntity):
 
     async def _scheduled_update(self, now: datetime) -> None:
         """Callback for scheduled updates at xx:00."""
-        _LOGGER.debug(f"Scheduled update triggered at {now.strftime('%H:%M:%S')} for {self.zaehlpunkt}")
+        _LOGGER.debug(f"Scheduled update triggered at {now.strftime('%Y-%m-%d %H:%M:%S')} for {self.zaehlpunkt}")
         await self.async_update()
 
     async def async_update(self):

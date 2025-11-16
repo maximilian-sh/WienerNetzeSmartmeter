@@ -2,7 +2,14 @@ name: Validate with hacs
 
 on:
   push:
+    paths:
+      - 'custom_components/**'
+      - 'hacs.json'
+      - '.github/workflows/validate.yml'
   pull_request:
+    paths:
+      - 'custom_components/**'
+      - 'hacs.json'
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * *"
