@@ -54,6 +54,11 @@ async def async_setup_entry(
     async_add_entities,
 ):
     """Setup sensors from a config entry created in the integrations UI."""
+    # FIX: Use config_entry.entry_id to access the coordinator, but check if key exists safely
+    if DOMAIN not in hass.data or config_entry.entry_id not in hass.data[DOMAIN]:
+        _LOGGER.error("Coordinator not found in hass.data for entry %s", config_entry.entry_id)
+        return
+
     coordinator: WienerNetzeCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     config = config_entry.data
     
