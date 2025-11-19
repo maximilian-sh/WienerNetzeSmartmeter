@@ -202,5 +202,5 @@ class Importer:
             statistics.append(StatisticData(start=ts, sum=total_usage, state=float(usage)))
         if len(statistics) > 0:
             _LOGGER.debug(f"Importing statistics from {statistics[0]} to {statistics[-1]}")
-        async_add_external_statistics(self.hass, metadata, statistics, "mean")
+        async_add_external_statistics(self.hass, metadata, statistics)
         return total_usage

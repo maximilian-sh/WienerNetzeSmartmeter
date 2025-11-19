@@ -100,10 +100,12 @@ class WienerNetzeCoordinator(DataUpdateCoordinator):
                 except Exception as e:
                     _LOGGER.error(f"Error updating zaehlpunkt {zp_id}: {e}")
                     # We continue to next zaehlpunkt instead of failing everything
+                    # Include error so we can see it in sensor attributes
                     data[zp_id] = {
                         "error": str(e),
                         "details": None,
-                        "reading": None
+                        "reading": None,
+                         "timestamp": datetime.now().strftime("%d.%m.%Y %H:%M:%S")
                     }
 
             return data
@@ -111,4 +113,3 @@ class WienerNetzeCoordinator(DataUpdateCoordinator):
         except Exception as e:
             _LOGGER.exception("Error updating Wiener Netze data")
             raise UpdateFailed(e) from e
-
