@@ -11,3 +11,4 @@ apipkg==3.0.2
 importlib-resources==6.1.0
 lxml==5.2.2
 flake8==6.1.0
+psutil-home-assistant==0.0.1
