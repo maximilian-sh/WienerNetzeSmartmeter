@@ -1,8 +1,8 @@
 """Set up the Wiener Netze SmartMeter Integration component."""
 import logging
 from homeassistant import core, config_entries
-from homeassistant.core import DOMAIN
 
+from .const import DOMAIN
 from .coordinator import WienerNetzeCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -13,6 +13,7 @@ async def async_setup_entry(
 ) -> bool:
     """Set up platform from a ConfigEntry."""
     _LOGGER.debug("Initializing WNSM entry: %s", entry.entry_id)
+    # DOMAIN is "wnsm"
     hass.data.setdefault(DOMAIN, {})
     
     coordinator = WienerNetzeCoordinator(hass, entry)
