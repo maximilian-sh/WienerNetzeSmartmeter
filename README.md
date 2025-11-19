@@ -9,6 +9,12 @@
 
 This is a fork of the original [WienerNetzeSmartmeter](https://github.com/DarwinsBuddy/WienerNetzeSmartmeter) repository with some additions for personal use. As long as pull requests are not accepted in the original repository, this fork will be maintained for personal use.
 
+### Added Features
+
+-   **Weekly Consumption Overview**: Added support for displaying weekly electricity consumption with daily bar charts. See [Weekly Overview Setup Guide](example/weekly_overview_setup.md) for detailed instructions.
+-   **Energy Dashboard Historical Cost Support**: Enabled statistics for the `OptimaAktivPriceSensor` to support historical cost calculations in Home Assistant's Energy Dashboard.
+-   **Precise Hourly Updates**: Improved update mechanism for `WNSMSensor` to update exactly on the hour (xx:00) with automatic initial update on startup. i dont think this shit is working sorry
+
 ## About
 
 This repo contains a custom component for [Home Assistant](https://www.home-assistant.io) for exposing a sensor
